@@ -1,2 +1,6 @@
 [core]
     autostage = true
+    remote = s3
+['remote "s3"']
+    url = s3://dvc-storage
+    endpointurl = http://localhost:9000

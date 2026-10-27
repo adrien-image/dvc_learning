@@ -1,0 +1,25 @@
+# Stockage S3 local (SeaweedFS) servant de remote DVC.
+#   docker compose up -d --wait      # démarre le S3 et crée le bucket
+#   docker compose down              # arrête (les données restent dans le volume s3-data)
+#   docker compose down -v           # arrête et supprime les données
+services:
+  s3:
+    image: chrislusf/seaweedfs:4.50
+    command: mini -dir=/data -bucket=${S3_BUCKET:-dvc-storage}
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?définir S3_ACCESS_KEY_ID dans .env}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?définir S3_SECRET_ACCESS_KEY dans .env}
+    ports:
+      # Seule l'API S3 est exposée, et uniquement en local
+      - "127.0.0.1:${S3_PORT:-9000}:8333"
+    volumes:
+      - s3-data:/data
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "8333"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  s3-data:

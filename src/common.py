@@ -11,8 +11,14 @@ MODEL_PATH = ROOT / "models" / "model.pt"
 MEAN, STD = 0.1307, 0.3081
 
 
-def load_params(filename: str = "params.yaml") -> dict:
-    with open(ROOT / filename) as f:
+def load_params() -> dict:
+    with open(ROOT / "params.yaml") as f:
+        return yaml.safe_load(f)
+
+
+def load_training_config() -> dict:
+    """Charge le fichier d'hyperparamètres référencé par `training.config` dans params.yaml."""
+    with open(ROOT / load_params()["training"]["config"]) as f:
         return yaml.safe_load(f)
 
 

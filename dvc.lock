@@ -5,8 +5,8 @@ stages:
     deps:
     - path: src/common.py
       hash: md5
-      md5: 3cf0099b907c2ab3125af4adfe9e0dca
-      size: 975
+      md5: ba167ec18c8167c019d781f76478a762
+      size: 1186
     - path: src/prepare.py
       hash: md5
       md5: b52730ede289005bbb59efdd1e475427
@@ -37,17 +37,19 @@ stages:
       nfiles: 3
     - path: src/common.py
       hash: md5
-      md5: 3cf0099b907c2ab3125af4adfe9e0dca
-      size: 975
+      md5: ba167ec18c8167c019d781f76478a762
+      size: 1186
     - path: src/model.py
       hash: md5
       md5: 46a1a819d89e032c5f0baeaca88d6002
       size: 837
     - path: src/train.py
       hash: md5
-      md5: c7a7527a11a5fdba6c044252d1ad250a
-      size: 3178
+      md5: e4530aaecf1a9aa0a71f10c04f3e890c
+      size: 3179
     params:
+      params.yaml:
+        training.config: training_config.yaml
       training_config.yaml:
         model:
           arch: cnn
@@ -89,8 +91,8 @@ stages:
       size: 1689777
     - path: src/common.py
       hash: md5
-      md5: 3cf0099b907c2ab3125af4adfe9e0dca
-      size: 975
+      md5: ba167ec18c8167c019d781f76478a762
+      size: 1186
     - path: src/model.py
       hash: md5
       md5: 46a1a819d89e032c5f0baeaca88d6002

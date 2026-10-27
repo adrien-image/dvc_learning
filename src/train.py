@@ -1,4 +1,4 @@
-"""Entraîne le modèle avec les paramètres `model.*` et `train.*` de training_config.yaml."""
+"""Entraîne le modèle avec les paramètres `model.*` et `train.*` du fichier `training.config`."""
 
 import csv
 import json
@@ -7,7 +7,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from common import MODEL_PATH, ROOT, get_device, load_params, load_split
+from common import MODEL_PATH, ROOT, get_device, load_split, load_training_config
 from model import build_model
 
 
@@ -35,7 +35,7 @@ def make_optimizer(model, p: dict) -> torch.optim.Optimizer:
 
 
 def main() -> None:
-    params = load_params("training_config.yaml")
+    params = load_training_config()
     mp, tp = params["model"], params["train"]
     torch.manual_seed(tp["seed"])
     device = get_device(tp["device"])

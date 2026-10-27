@@ -2,6 +2,9 @@ prepare:
   val_size: 5000        # nombre d'images du train set réservées à la validation
   seed: 42
 
+training:
+  config: training_config.yaml   # fichier des hyperparamètres d'entraînement
+
 predict:
   batch_size: 512
   device: auto          # auto | cpu | mps | cuda

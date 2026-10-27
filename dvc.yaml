@@ -18,7 +18,8 @@ stages:
       - src/common.py
       - data/prepared
     params:
-      - training_config.yaml:
+      - training.config
+      - ${training.config}:
           - model
           - train
     outs:

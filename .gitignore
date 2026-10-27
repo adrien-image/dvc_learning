@@ -1,3 +1,31 @@
-.venv/
+# Les sorties des stages (data/, models/, predictions/) sont ignorées par les .gitignore
+# que DVC génère dans chaque dossier : ne pas les ajouter ici.
+# metrics/ et plots/ sont volontairement versionnés par git (cache: false dans dvc.yaml).
+
+# DVC : rendus HTML de `dvc plots show` / `dvc plots diff`
+dvc_plots/
+
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# Environnement
+.venv/
+.env
+.env.*
+
+# Éditeurs / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

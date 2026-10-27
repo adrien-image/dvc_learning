@@ -15,7 +15,7 @@ source .venv/bin/activate   # ou préfixer chaque commande par `uv run`
 | Stage      | Script               | Params      | Sorties                                               |
 |------------|----------------------|-------------|-------------------------------------------------------|
 | `prepare`  | `src/prepare.py`     | `prepare`   | `data/raw`, `data/prepared/{train,val,test}.pt`       |
-| `train`    | `src/train.py`       | `training_config.yaml` | `models/model.pt`, `metrics/train.json`, `plots/train_history.csv` |
+| `train`    | `src/train.py`       | `training.config` + son contenu | `models/model.pt`, `metrics/train.json`, `plots/train_history.csv` |
 | `predict`  | `src/predict.py`     | `predict`   | `predictions/test.csv`                                |
 | `evaluate` | `src/evaluate.py`    | –           | `metrics/eval.json`, `plots/confusion.csv`            |
 
@@ -26,13 +26,18 @@ dvc dag            # visualiser le graphe
 
 ## Paramètres
 
-`training_config.yaml` (entraînement) :
+`params.yaml` désigne le fichier d'hyperparamètres via `training.config`
+(par défaut `training_config.yaml`). `src/train.py` lit ce chemin et charge le fichier,
+et `dvc.yaml` le référence par interpolation (`${training.config}`) : le nom du fichier
+n'est écrit en dur nulle part ailleurs.
+
+Contenu du fichier de config d'entraînement :
 
 - `model.arch` (`cnn` | `mlp`), `model.hidden_size`, `model.dropout`
 - `train.epochs`, `train.batch_size`, `train.lr`, `train.optimizer` (`adam` | `sgd`),
   `train.momentum`, `train.weight_decay`, `train.seed`, `train.device` (`auto` | `cpu` | `mps` | `cuda`)
 
-`params.yaml` (le reste) : `prepare.val_size`, `prepare.seed`, `predict.batch_size`, `predict.device`
+`params.yaml` (le reste) : `training.config`, `prepare.val_size`, `prepare.seed`, `predict.batch_size`, `predict.device`
 
 Modifier un paramètre puis `dvc repro` ne relance que ce qui en dépend
 (ex. changer `train.lr` ne retélécharge pas les données).
@@ -51,6 +56,9 @@ dvc exp run -n mlp-sgd \
 dvc exp run --queue \
   -S training_config.yaml:train.lr=0.0005,0.001,0.003 \
   -S training_config.yaml:train.epochs=3,5
+# Utiliser un autre fichier de config (ex. configs/mlp.yaml, à créer et commiter)
+dvc exp run -S training.config=configs/mlp.yaml
+
 dvc queue start -j 2        # lance la file avec 2 workers
 dvc queue status
 

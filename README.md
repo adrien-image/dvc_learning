@@ -37,6 +37,25 @@ Contenu du fichier de config d'entraînement :
 - `train.epochs`, `train.batch_size`, `train.lr`, `train.optimizer` (`adam` | `sgd`),
   `train.momentum`, `train.weight_decay`, `train.seed`, `train.device` (`auto` | `cpu` | `mps` | `cuda`)
 
+### Paramètres obligatoires et optionnels
+
+`src/common.py` définit `TRAINING_REQUIRED` (clés qui doivent figurer dans le fichier) et
+`TRAINING_DEFAULTS` (clés optionnelles et leur valeur par défaut). Une clé obligatoire
+manquante ou une clé inconnue (faute de frappe) fait échouer l'entraînement.
+
+Pour ajouter un nouveau paramètre optionnel : l'ajouter à `TRAINING_DEFAULTS`, puis l'utiliser
+dans `train.py`. Les configs existantes restent valides sans modification.
+
+Avec `dvc exp`, une clé absente du fichier s'ajoute avec `+` (syntaxe Hydra) et se retire avec `~` :
+
+```bash
+dvc exp run -S 'training_config.yaml:+train.weight_decay=0.0001'   # clé absente du fichier
+dvc exp run -S 'training_config.yaml:~train.momentum'              # retour à la valeur par défaut
+```
+
+`dvc exp show` n'affiche que les valeurs écrites dans le fichier : une clé absente apparaît
+vide (`-`), et la valeur réellement utilisée est le défaut défini dans le code.
+
 `params.yaml` (le reste) : `training.config`, `prepare.val_size`, `prepare.seed`, `predict.batch_size`, `predict.device`
 
 Modifier un paramètre puis `dvc repro` ne relance que ce qui en dépend

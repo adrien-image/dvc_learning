@@ -16,10 +16,35 @@ def load_params() -> dict:
         return yaml.safe_load(f)
 
 
+# Paramètres optionnels : valeur utilisée quand la clé est absente du fichier de config.
+# Toute clé non listée ici doit être présente dans le fichier.
+TRAINING_DEFAULTS = {
+    "model": {"hidden_size": 128, "dropout": 0.0},
+    "train": {"momentum": 0.9, "weight_decay": 0.0, "seed": 42, "device": "auto"},
+}
+TRAINING_REQUIRED = {
+    "model": {"arch"},
+    "train": {"epochs", "batch_size", "lr", "optimizer"},
+}
+
+
 def load_training_config() -> dict:
-    """Charge le fichier d'hyperparamètres référencé par `training.config` dans params.yaml."""
-    with open(ROOT / load_params()["training"]["config"]) as f:
-        return yaml.safe_load(f)
+    """Charge le fichier d'hyperparamètres référencé par `training.config` dans params.yaml,
+    complète les clés optionnelles par leur défaut et refuse les clés inconnues (fautes de frappe)."""
+    path = load_params()["training"]["config"]
+    with open(ROOT / path) as f:
+        config = yaml.safe_load(f) or {}
+
+    resolved = {}
+    for section, required in TRAINING_REQUIRED.items():
+        values = config.get(section) or {}
+        defaults = TRAINING_DEFAULTS[section]
+        if missing := required - values.keys():
+            raise KeyError(f"{path}: clé(s) obligatoire(s) manquante(s) dans '{section}' : {sorted(missing)}")
+        if unknown := values.keys() - required - defaults.keys():
+            raise KeyError(f"{path}: clé(s) inconnue(s) dans '{section}' : {sorted(unknown)}")
+        resolved[section] = defaults | values
+    return resolved
 
 
 def load_split(name: str) -> tuple[torch.Tensor, torch.Tensor]:

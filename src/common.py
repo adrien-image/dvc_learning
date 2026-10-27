@@ -11,8 +11,8 @@ MODEL_PATH = ROOT / "models" / "model.pt"
 MEAN, STD = 0.1307, 0.3081
 
 
-def load_params() -> dict:
-    with open(ROOT / "params.yaml") as f:
+def load_params(filename: str = "params.yaml") -> dict:
+    with open(ROOT / filename) as f:
         return yaml.safe_load(f)
 
 

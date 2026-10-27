@@ -7,6 +7,7 @@
 import argparse
 import csv
 
+import numpy as np
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -40,9 +41,9 @@ def load_images(paths: list[str]) -> torch.Tensor:
     for p in paths:
         img = Image.open(p).convert("L").resize((28, 28))
         # MNIST = chiffre clair sur fond sombre : on inverse si le fond est clair
-        if sum(img.getdata()) / (28 * 28) > 127:
+        if np.asarray(img).mean() > 127:
             img = ImageOps.invert(img)
-        t = torch.tensor(list(img.getdata()), dtype=torch.float32).view(1, 28, 28)
+        t = torch.tensor(np.asarray(img), dtype=torch.float32).unsqueeze(0)
         tensors.append(t.div(255).sub(MEAN).div(STD))
     return torch.stack(tensors)
 
@@ -52,10 +53,10 @@ def main() -> None:
     parser.add_argument("images", nargs="*", help="Images à classer (sinon : test set MNIST)")
     args = parser.parse_args()
 
-    params = load_params()
-    device = get_device(params["train"]["device"])
+    params = load_params()["predict"]
+    device = get_device(params["device"])
     model = load_model(device)
-    batch_size = params["predict"]["batch_size"]
+    batch_size = params["batch_size"]
 
     if args.images:
         preds, confs = predict(model, load_images(args.images), batch_size, device)

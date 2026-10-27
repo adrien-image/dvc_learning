@@ -1,0 +1,14 @@
+model:
+  arch: cnn             # cnn | mlp
+  hidden_size: 128
+  dropout: 0.2
+
+train:
+  epochs: 3
+  batch_size: 128
+  lr: 0.001
+  optimizer: adam       # adam | sgd
+  momentum: 0.9         # utilisé seulement avec sgd
+  weight_decay: 0.0
+  seed: 42
+  device: auto          # auto | cpu | mps | cuda

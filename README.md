@@ -1,7 +1,7 @@
 # MNIST + DVC
 
 Pipeline DVC pour entraîner un classifieur MNIST (PyTorch) et faire des prédictions,
-avec tous les hyperparamètres dans `params.yaml` et le suivi des essais via `dvc exp`.
+avec les hyperparamètres d'entraînement dans `training_config.yaml` et le suivi des essais via `dvc exp`.
 
 ## Installation
 
@@ -15,7 +15,7 @@ source .venv/bin/activate   # ou préfixer chaque commande par `uv run`
 | Stage      | Script               | Params      | Sorties                                               |
 |------------|----------------------|-------------|-------------------------------------------------------|
 | `prepare`  | `src/prepare.py`     | `prepare`   | `data/raw`, `data/prepared/{train,val,test}.pt`       |
-| `train`    | `src/train.py`       | `model`, `train` | `models/model.pt`, `metrics/train.json`, `plots/train_history.csv` |
+| `train`    | `src/train.py`       | `training_config.yaml` | `models/model.pt`, `metrics/train.json`, `plots/train_history.csv` |
 | `predict`  | `src/predict.py`     | `predict`   | `predictions/test.csv`                                |
 | `evaluate` | `src/evaluate.py`    | –           | `metrics/eval.json`, `plots/confusion.csv`            |
 
@@ -24,12 +24,15 @@ dvc repro          # ne relance que les stages dont les deps/params ont changé
 dvc dag            # visualiser le graphe
 ```
 
-## Paramètres (`params.yaml`)
+## Paramètres
+
+`training_config.yaml` (entraînement) :
 
 - `model.arch` (`cnn` | `mlp`), `model.hidden_size`, `model.dropout`
 - `train.epochs`, `train.batch_size`, `train.lr`, `train.optimizer` (`adam` | `sgd`),
   `train.momentum`, `train.weight_decay`, `train.seed`, `train.device` (`auto` | `cpu` | `mps` | `cuda`)
-- `prepare.val_size`, `prepare.seed`, `predict.batch_size`
+
+`params.yaml` (le reste) : `prepare.val_size`, `prepare.seed`, `predict.batch_size`, `predict.device`
 
 Modifier un paramètre puis `dvc repro` ne relance que ce qui en dépend
 (ex. changer `train.lr` ne retélécharge pas les données).
@@ -37,11 +40,17 @@ Modifier un paramètre puis `dvc repro` ne relance que ce qui en dépend
 ## Expériences avec `dvc exp`
 
 ```bash
+# Les params hors params.yaml se préfixent par leur fichier : -S <fichier>:<clé>=<valeur>
 # Une expérience, en surchargeant des params sans toucher au fichier
-dvc exp run -n mlp-sgd -S model.arch=mlp -S train.optimizer=sgd -S train.lr=0.05
+dvc exp run -n mlp-sgd \
+  -S training_config.yaml:model.arch=mlp \
+  -S training_config.yaml:train.optimizer=sgd \
+  -S training_config.yaml:train.lr=0.05
 
 # Grille de recherche : produit cartésien des valeurs (ici 3 x 2 = 6 runs)
-dvc exp run --queue -S train.lr=0.0005,0.001,0.003 -S train.epochs=3,5
+dvc exp run --queue \
+  -S training_config.yaml:train.lr=0.0005,0.001,0.003 \
+  -S training_config.yaml:train.epochs=3,5
 dvc queue start -j 2        # lance la file avec 2 workers
 dvc queue status
 
@@ -59,9 +68,9 @@ git commit -am "..."         # ou : dvc exp branch <exp> <branche>
 dvc exp remove <exp>         # ou --all-commits / -A pour tout supprimer
 ```
 
-⚠️ `dvc exp run` (sans `--queue`) **applique ses résultats au workspace** : `params.yaml`
+⚠️ `dvc exp run` (sans `--queue`) **applique ses résultats au workspace** : `training_config.yaml`
 contient alors les valeurs de l'expérience. Une expérience mise en file ensuite part de cet
-état modifié. Pour repartir de la version commitée : `git checkout params.yaml dvc.lock && dvc checkout`.
+état modifié. Pour repartir de la version commitée : `git checkout training_config.yaml dvc.lock && dvc checkout`.
 
 ## Prédire sur ses propres images
 

@@ -18,8 +18,9 @@ stages:
       - src/common.py
       - data/prepared
     params:
-      - model
-      - train
+      - training_config.yaml:
+          - model
+          - train
     outs:
       - models/model.pt
     metrics:

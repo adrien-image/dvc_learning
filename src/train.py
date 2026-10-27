@@ -1,4 +1,4 @@
-"""Entraîne le modèle avec les paramètres `model.*` et `train.*` de params.yaml."""
+"""Entraîne le modèle avec les paramètres `model.*` et `train.*` de training_config.yaml."""
 
 import csv
 import json
@@ -35,7 +35,7 @@ def make_optimizer(model, p: dict) -> torch.optim.Optimizer:
 
 
 def main() -> None:
-    params = load_params()
+    params = load_params("training_config.yaml")
     mp, tp = params["model"], params["train"]
     torch.manual_seed(tp["seed"])
     device = get_device(tp["device"])

@@ -46,15 +46,76 @@ manquante ou une clé inconnue (faute de frappe) fait échouer l'entraînement.
 Pour ajouter un nouveau paramètre optionnel : l'ajouter à `TRAINING_DEFAULTS`, puis l'utiliser
 dans `train.py`. Les configs existantes restent valides sans modification.
 
-Avec `dvc exp`, une clé absente du fichier s'ajoute avec `+` (syntaxe Hydra) et se retire avec `~` :
+### Surcharger un paramètre optionnel avec `dvc exp` (`+`, `++`, `~`)
+
+`dvc exp run -S` ne modifie pas la config en mémoire : il **réécrit le fichier YAML** de
+l'expérience, en suivant la syntaxe d'override de [Hydra](https://hydra.cc/docs/advanced/override_grammar/basic/).
+Hydra est strict : sans préfixe, `-S` ne peut que **modifier une clé qui existe déjà** dans le
+fichier. Pour un paramètre optionnel absent du fichier, il faut le dire explicitement avec un préfixe :
+
+| Syntaxe                        | Clé présente dans le fichier | Clé absente du fichier |
+|--------------------------------|------------------------------|------------------------|
+| `train.x=1`                    | modifiée                     | ❌ erreur              |
+| `+train.x=1`                   | ❌ erreur                    | ajoutée                |
+| `++train.x=1`                  | modifiée                     | ajoutée                |
+| `~train.x`                     | supprimée (→ défaut du code) | ❌ erreur              |
+
+En cas d'erreur, DVC affiche `Invalid --set-param value`. Penser aux guillemets autour de
+l'argument (`'...'`), pour que le shell n'interprète pas `~`.
+
+**Exemple : ajouter un paramètre optionnel `train.label_smoothing`**
+
+1. Le déclarer avec sa valeur par défaut dans `src/common.py` :
+
+   ```python
+   TRAINING_DEFAULTS = {
+       "model": {"hidden_size": 128, "dropout": 0.0},
+       "train": {"momentum": 0.9, "weight_decay": 0.0, "seed": 42, "device": "auto",
+                 "label_smoothing": 0.0},
+   }
+   ```
+
+2. L'utiliser dans `src/train.py` :
+
+   ```python
+   loss = nn.functional.cross_entropy(model(x), y, label_smoothing=tp["label_smoothing"])
+   ```
+
+3. Commiter. `training_config.yaml` n'a pas besoin de changer : sans la clé, le défaut `0.0`
+   s'applique et le comportement est identique à avant.
+
+4. Lancer des expériences en ajoutant la clé avec `+` (elle n'est pas dans le fichier) :
+
+   ```bash
+   # une expérience
+   dvc exp run -n smooth-0.1 -S 'training_config.yaml:+train.label_smoothing=0.1'
+
+   # une grille : `+` se combine avec une liste de valeurs (ici 3 runs)
+   dvc exp run --queue -S 'training_config.yaml:+train.label_smoothing=0.05,0.1,0.2'
+   dvc queue start
+
+   # forme qui marche que la clé soit présente ou non
+   dvc exp run -S 'training_config.yaml:++train.label_smoothing=0.1'
+   ```
+
+5. Comparer :
+
+   ```bash
+   dvc exp show --keep 'Experiment|label_smoothing|test_acc' --drop '.*'
+   ```
+
+   La colonne `train.label_smoothing` n'apparaît renseignée que pour les expériences où la clé
+   a été écrite. Pour les autres, elle est vide (`-`), et la valeur réellement utilisée est le
+   défaut défini dans le code.
+
+À l'inverse, pour revenir au défaut d'une clé présente dans le fichier :
 
 ```bash
-dvc exp run -S 'training_config.yaml:+train.weight_decay=0.0001'   # clé absente du fichier
-dvc exp run -S 'training_config.yaml:~train.momentum'              # retour à la valeur par défaut
+dvc exp run -S 'training_config.yaml:~train.momentum'
 ```
 
-`dvc exp show` n'affiche que les valeurs écrites dans le fichier : une clé absente apparaît
-vide (`-`), et la valeur réellement utilisée est le défaut défini dans le code.
+Si `dvc exp apply` est appliqué à une expérience lancée avec `+`, la clé est ajoutée à
+`training_config.yaml` : commiter le fichier la rend alors permanente.
 
 `params.yaml` (le reste) : `training.config`, `prepare.val_size`, `prepare.seed`, `predict.batch_size`, `predict.device`
 

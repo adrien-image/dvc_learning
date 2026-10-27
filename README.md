@@ -10,6 +10,8 @@ uv sync
 source .venv/bin/activate   # ou préfixer chaque commande par `uv run`
 ```
 
+Pour partager données et modèles via un stockage S3 : voir [Stockage S3](#stockage-s3-remote-dvc).
+
 ## Pipeline (`dvc.yaml`)
 
 | Stage      | Script               | Params      | Sorties                                               |
@@ -159,6 +161,68 @@ dvc exp remove <exp>         # ou --all-commits / -A pour tout supprimer
 ⚠️ `dvc exp run` (sans `--queue`) **applique ses résultats au workspace** : `training_config.yaml`
 contient alors les valeurs de l'expérience. Une expérience mise en file ensuite part de cet
 état modifié. Pour repartir de la version commitée : `git checkout training_config.yaml dvc.lock && dvc checkout`.
+
+## Stockage S3 (remote DVC)
+
+Les données, le modèle et les prédictions sont dans le cache DVC local. Pour les partager ou
+les sauvegarder, le projet fournit un S3 local ([SeaweedFS](https://github.com/seaweedfs/seaweedfs),
+compatible S3) via Docker Compose, et un script qui y connecte DVC.
+
+### Lancer le S3
+
+```bash
+cp .env.example .env              # puis changer S3_SECRET_ACCESS_KEY
+docker compose up -d --wait       # démarre le S3 sur http://localhost:9000 et crée le bucket
+```
+
+`.env` contient les identifiants (`S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`), le bucket
+(`S3_BUCKET`, défaut `dvc-storage`) et le port (`S3_PORT`, défaut `9000`). Il n'est pas versionné.
+Seule l'API S3 est exposée, et uniquement sur `127.0.0.1`. Les données sont dans le volume Docker `s3-data`.
+
+```bash
+docker compose ps                 # état
+docker compose logs -f s3         # logs
+docker compose down               # arrêter (les données sont conservées)
+docker compose down -v            # arrêter et supprimer les données
+```
+
+### Connecter DVC
+
+```bash
+./scripts/setup_dvc_remote.sh     # ou : uv run scripts/setup_dvc_remote.sh
+```
+
+Le script lit `.env` et configure le remote par défaut `s3` :
+
+- `.dvc/config` (versionné) : `url = s3://dvc-storage`, `endpointurl = http://localhost:9000`
+- `.dvc/config.local` (ignoré par git) : `access_key_id`, `secret_access_key`
+
+À relancer après un changement de `.env`.
+
+### Envoyer / récupérer
+
+```bash
+dvc push                          # envoie les sorties du workspace (dvc.lock courant)
+dvc push --all-commits            # ... et celles de tous les commits
+dvc pull                          # récupère les sorties correspondant au dvc.lock courant
+dvc status --cloud                # compare le cache local et le remote
+```
+
+Sur une autre machine (ou un nouveau clone) : `uv sync`, copier `.env`, lancer
+`./scripts/setup_dvc_remote.sh`, puis `dvc pull`. Pas besoin de relancer le pipeline.
+
+Les expériences (`dvc exp`) sont stockées dans des refs git. Pour les partager avec leurs
+artefacts, il faut un remote git en plus : `dvc exp push origin <exp>`.
+
+### Utiliser un vrai bucket AWS S3
+
+```bash
+dvc remote add --default --force s3 s3://mon-bucket/dvc
+dvc remote modify s3 --unset endpointurl
+```
+
+Les identifiants viennent alors de la config AWS habituelle (`~/.aws/credentials`, `AWS_PROFILE`,
+variables d'environnement), ou de `dvc remote modify --local s3 access_key_id ...`.
 
 ## Prédire sur ses propres images
 

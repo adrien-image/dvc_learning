@@ -1,0 +1,69 @@
+stages:
+  prepare:
+    cmd: python src/prepare.py
+    deps:
+      - src/prepare.py
+      - src/common.py
+    params:
+      - prepare
+    outs:
+      - data/raw
+      - data/prepared
+
+  train:
+    cmd: python src/train.py
+    deps:
+      - src/train.py
+      - src/model.py
+      - src/common.py
+      - data/prepared
+    params:
+      - model
+      - train
+    outs:
+      - models/model.pt
+    metrics:
+      - metrics/train.json:
+          cache: false
+    plots:
+      - plots/train_history.csv:
+          cache: false
+          x: epoch
+
+  predict:
+    cmd: python src/predict.py
+    deps:
+      - src/predict.py
+      - src/model.py
+      - src/common.py
+      - models/model.pt
+      - data/prepared
+    params:
+      - predict
+    outs:
+      - predictions/test.csv
+
+  evaluate:
+    cmd: python src/evaluate.py
+    deps:
+      - src/evaluate.py
+      - predictions/test.csv
+    metrics:
+      - metrics/eval.json:
+          cache: false
+    plots:
+      - plots/confusion.csv:
+          cache: false
+          template: confusion
+          x: predicted
+          y: actual
+
+plots:
+  - Courbes d'apprentissage:
+      x: epoch
+      y:
+        plots/train_history.csv: [train_loss, val_loss]
+  - Accuracy validation:
+      x: epoch
+      y:
+        plots/train_history.csv: val_acc

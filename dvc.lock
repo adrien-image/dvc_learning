@@ -1,0 +1,130 @@
+schema: '2.0'
+stages:
+  prepare:
+    cmd: python src/prepare.py
+    deps:
+    - path: src/common.py
+      hash: md5
+      md5: 1e51e0f48121df99f9a1a8e554759cee
+      size: 951
+    - path: src/prepare.py
+      hash: md5
+      md5: b52730ede289005bbb59efdd1e475427
+      size: 1060
+    params:
+      params.yaml:
+        prepare:
+          val_size: 5000
+          seed: 42
+    outs:
+    - path: data/prepared
+      hash: md5
+      md5: 87c0255366a73058f0c9556472294c66.dir
+      size: 55445223
+      nfiles: 3
+    - path: data/raw
+      hash: md5
+      md5: ab3353d41bd7a24a20a31f29b64e3b3c.dir
+      size: 66544770
+      nfiles: 8
+  train:
+    cmd: python src/train.py
+    deps:
+    - path: data/prepared
+      hash: md5
+      md5: 87c0255366a73058f0c9556472294c66.dir
+      size: 55445223
+      nfiles: 3
+    - path: src/common.py
+      hash: md5
+      md5: 1e51e0f48121df99f9a1a8e554759cee
+      size: 951
+    - path: src/model.py
+      hash: md5
+      md5: 46a1a819d89e032c5f0baeaca88d6002
+      size: 837
+    - path: src/train.py
+      hash: md5
+      md5: 025a8f7fb7c9bacc41cb6d0b9bb7d47c
+      size: 3147
+    params:
+      params.yaml:
+        model:
+          arch: cnn
+          hidden_size: 128
+          dropout: 0.2
+        train:
+          epochs: 3
+          batch_size: 128
+          lr: 0.001
+          optimizer: adam
+          momentum: 0.9
+          weight_decay: 0.0
+          seed: 42
+          device: auto
+    outs:
+    - path: metrics/train.json
+      hash: md5
+      md5: 4a8ef342abf8dcba24e34c626b00fb75
+      size: 96
+    - path: models/model.pt
+      hash: md5
+      md5: 030b0e3196e65223ae5ae8ccc87cf38f
+      size: 1689777
+    - path: plots/train_history.csv
+      hash: md5
+      md5: 74293644fcf6cc63abded34e52afdf32
+      size: 185
+  predict:
+    cmd: python src/predict.py
+    deps:
+    - path: data/prepared
+      hash: md5
+      md5: 87c0255366a73058f0c9556472294c66.dir
+      size: 55445223
+      nfiles: 3
+    - path: models/model.pt
+      hash: md5
+      md5: 030b0e3196e65223ae5ae8ccc87cf38f
+      size: 1689777
+    - path: src/common.py
+      hash: md5
+      md5: 1e51e0f48121df99f9a1a8e554759cee
+      size: 951
+    - path: src/model.py
+      hash: md5
+      md5: 46a1a819d89e032c5f0baeaca88d6002
+      size: 837
+    - path: src/predict.py
+      hash: md5
+      md5: 707aa5099d57a603c62b7e4c7beebce9
+      size: 2847
+    params:
+      params.yaml:
+        predict:
+          batch_size: 512
+    outs:
+    - path: predictions/test.csv
+      hash: md5
+      md5: 775079a2ea2c80646a130041295b71b5
+      size: 168925
+  evaluate:
+    cmd: python src/evaluate.py
+    deps:
+    - path: predictions/test.csv
+      hash: md5
+      md5: 775079a2ea2c80646a130041295b71b5
+      size: 168925
+    - path: src/evaluate.py
+      hash: md5
+      md5: 96146f4029c4662243eacc6b44c294b9
+      size: 1266
+    outs:
+    - path: metrics/eval.json
+      hash: md5
+      md5: c88b0d69525782ec3e00a2da87052088
+      size: 343
+    - path: plots/confusion.csv
+      hash: md5
+      md5: e5e7243acf2c377427be163f0c45d1f3
+      size: 50018

@@ -14,12 +14,30 @@ Pour partager données et modèles via un stockage S3 : voir [Stockage S3](#stoc
 
 ## Pipeline (`dvc.yaml`)
 
-| Stage      | Script               | Params      | Sorties                                               |
-|------------|----------------------|-------------|-------------------------------------------------------|
-| `prepare`  | `src/prepare.py`     | `prepare`   | `data/raw`, `data/prepared/{train,val,test}.pt`       |
-| `train`    | `src/train.py`       | `training.config` + son contenu | `models/model.pt`, `metrics/train.json`, `plots/train_history.csv` |
-| `predict`  | `src/predict.py`     | `predict`   | `predictions/test.csv`                                |
-| `evaluate` | `src/evaluate.py`    | –           | `metrics/eval.json`, `plots/confusion.csv`            |
+| Stage           | Script                  | Dépend de (données)                 | Params                          | Sorties                                                            |
+|-----------------|-------------------------|-------------------------------------|---------------------------------|--------------------------------------------------------------------|
+| `download`      | `src/download.py`       | –                                   | –                               | `data/raw`                                                         |
+| `prepare_train` | `src/prepare_train.py`  | `data/raw`                          | `prepare`                       | `data/prepared/train.pt`, `data/prepared/val.pt`                   |
+| `prepare_test`  | `src/prepare_test.py`   | `data/raw`                          | –                               | `data/prepared/test.pt`                                            |
+| `train`         | `src/train.py`          | `train.pt`, `val.pt`                | `training.config` + son contenu | `models/model.pt`, `metrics/train.json`, `plots/train_history.csv` |
+| `predict`       | `src/predict.py`        | `models/model.pt`, `test.pt`        | `predict`                       | `predictions/test.csv`                                             |
+| `evaluate`      | `src/evaluate.py`       | `predictions/test.csv`              | –                               | `metrics/eval.json`, `plots/confusion.csv`                         |
+
+```
+              download
+             /        \
+   prepare_train    prepare_test
+         |                |
+       train              |
+             \          /
+               predict
+                  |
+              evaluate
+```
+
+La préparation du train set et celle du test set sont séparées : changer `prepare.val_size`
+ou `prepare.seed` relance `prepare_train` et la suite, mais pas `prepare_test`. Le
+test set ne dépend d'aucun paramètre et reste identique d'une expérience à l'autre.
 
 ```bash
 dvc repro          # ne relance que les stages dont les deps/params ont changé

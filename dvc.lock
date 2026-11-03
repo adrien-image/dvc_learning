@@ -30,15 +30,18 @@ stages:
   train:
     cmd: python src/train.py
     deps:
-    - path: data/prepared
+    - path: data/prepared/train.pt
       hash: md5
-      md5: 87c0255366a73058f0c9556472294c66.dir
-      size: 55445223
-      nfiles: 3
+      md5: c6a97822581f4a8e8b1097a68b22567c
+      size: 43561749
+    - path: data/prepared/val.pt
+      hash: md5
+      md5: 259fa262eb58e9d5c345a4222e4c422e
+      size: 3961733
     - path: src/common.py
       hash: md5
-      md5: 0d32efa623c85b64d3fdc66c346ae75e
-      size: 2290
+      md5: 551399f0d55af991d8be74d155ec356e
+      size: 2673
     - path: src/model.py
       hash: md5
       md5: 46a1a819d89e032c5f0baeaca88d6002
@@ -80,19 +83,18 @@ stages:
   predict:
     cmd: python src/predict.py
     deps:
-    - path: data/prepared
+    - path: data/prepared/test.pt
       hash: md5
-      md5: 87c0255366a73058f0c9556472294c66.dir
-      size: 55445223
-      nfiles: 3
+      md5: 586e03d737067acc485273391dec7cfd
+      size: 7921741
     - path: models/model.pt
       hash: md5
       md5: 292c94944ab2ff8fc953ed8ab1a29389
       size: 1689777
     - path: src/common.py
       hash: md5
-      md5: 0d32efa623c85b64d3fdc66c346ae75e
-      size: 2290
+      md5: 551399f0d55af991d8be74d155ec356e
+      size: 2673
     - path: src/model.py
       hash: md5
       md5: 46a1a819d89e032c5f0baeaca88d6002
@@ -131,3 +133,67 @@ stages:
       hash: md5
       md5: c197624ce1a00dee619f4472a02b2757
       size: 50018
+  download:
+    cmd: python src/download.py
+    deps:
+    - path: src/download.py
+      hash: md5
+      md5: 4cbfd87b70b150499331b9fe4db8f322
+      size: 356
+    outs:
+    - path: data/raw
+      hash: md5
+      md5: ab3353d41bd7a24a20a31f29b64e3b3c.dir
+      size: 66544770
+      nfiles: 8
+  prepare_train:
+    cmd: python src/prepare_train.py
+    deps:
+    - path: data/raw
+      hash: md5
+      md5: ab3353d41bd7a24a20a31f29b64e3b3c.dir
+      size: 66544770
+      nfiles: 8
+    - path: src/common.py
+      hash: md5
+      md5: 551399f0d55af991d8be74d155ec356e
+      size: 2673
+    - path: src/prepare_train.py
+      hash: md5
+      md5: 5d0b0eaaf7a38e9f0957f93dc5dcb6b4
+      size: 672
+    params:
+      params.yaml:
+        prepare:
+          val_size: 5000
+          seed: 42
+    outs:
+    - path: data/prepared/train.pt
+      hash: md5
+      md5: c6a97822581f4a8e8b1097a68b22567c
+      size: 43561749
+    - path: data/prepared/val.pt
+      hash: md5
+      md5: 259fa262eb58e9d5c345a4222e4c422e
+      size: 3961733
+  prepare_test:
+    cmd: python src/prepare_test.py
+    deps:
+    - path: data/raw
+      hash: md5
+      md5: ab3353d41bd7a24a20a31f29b64e3b3c.dir
+      size: 66544770
+      nfiles: 8
+    - path: src/common.py
+      hash: md5
+      md5: 551399f0d55af991d8be74d155ec356e
+      size: 2673
+    - path: src/prepare_test.py
+      hash: md5
+      md5: 2b8bf9d9ffb38a385743509c4ff306a2
+      size: 289
+    outs:
+    - path: data/prepared/test.pt
+      hash: md5
+      md5: 586e03d737067acc485273391dec7cfd
+      size: 7921741

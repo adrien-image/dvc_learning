@@ -1,14 +1,31 @@
 stages:
-  prepare:
-    cmd: python src/prepare.py
+  download:
+    cmd: python src/download.py
     deps:
-      - src/prepare.py
+      - src/download.py
+    outs:
+      - data/raw
+
+  prepare_train:
+    cmd: python src/prepare_train.py
+    deps:
+      - src/prepare_train.py
       - src/common.py
+      - data/raw
     params:
       - prepare
     outs:
+      - data/prepared/train.pt
+      - data/prepared/val.pt
+
+  prepare_test:
+    cmd: python src/prepare_test.py
+    deps:
+      - src/prepare_test.py
+      - src/common.py
       - data/raw
-      - data/prepared
+    outs:
+      - data/prepared/test.pt
 
   train:
     cmd: python src/train.py
@@ -16,7 +33,8 @@ stages:
       - src/train.py
       - src/model.py
       - src/common.py
-      - data/prepared
+      - data/prepared/train.pt
+      - data/prepared/val.pt
     params:
       - training.config
       - ${training.config}:
@@ -39,7 +57,7 @@ stages:
       - src/model.py
       - src/common.py
       - models/model.pt
-      - data/prepared
+      - data/prepared/test.pt
     params:
       - predict
     outs:

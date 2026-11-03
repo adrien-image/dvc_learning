@@ -4,6 +4,7 @@ import torch
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
+RAW_DIR = ROOT / "data" / "raw"
 PREPARED_DIR = ROOT / "data" / "prepared"
 MODEL_PATH = ROOT / "models" / "model.pt"
 
@@ -45,6 +46,13 @@ def load_training_config() -> dict:
             raise KeyError(f"{path}: clé(s) inconnue(s) dans '{section}' : {sorted(unknown)}")
         resolved[section] = defaults | values
     return resolved
+
+
+def save_split(name: str, images: torch.Tensor, labels: torch.Tensor) -> None:
+    """Enregistre un split préparé (images uint8 [N,28,28], labels) dans data/prepared."""
+    PREPARED_DIR.mkdir(parents=True, exist_ok=True)
+    torch.save({"images": images, "labels": labels}, PREPARED_DIR / f"{name}.pt")
+    print(f"{name}: {len(labels)} images")
 
 
 def load_split(name: str) -> tuple[torch.Tensor, torch.Tensor]:

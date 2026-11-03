@@ -1,17 +1,24 @@
 stages:
-  download:
-    cmd: python src/download.py
+  download_mnist:
+    cmd: python src/download.py mnist
     deps:
       - src/download.py
     outs:
-      - data/raw
+      - data/raw/MNIST
+
+  download_qmnist:
+    cmd: python src/download.py qmnist
+    deps:
+      - src/download.py
+    outs:
+      - data/raw/QMNIST
 
   prepare_train:
     cmd: python src/prepare_train.py
     deps:
       - src/prepare_train.py
       - src/common.py
-      - data/raw
+      - data/raw/MNIST
     params:
       - prepare
     outs:
@@ -23,9 +30,18 @@ stages:
     deps:
       - src/prepare_test.py
       - src/common.py
-      - data/raw
+      - data/raw/MNIST
     outs:
       - data/prepared/test.pt
+
+  prepare_test_qmnist:
+    cmd: python src/prepare_test_qmnist.py
+    deps:
+      - src/prepare_test_qmnist.py
+      - src/common.py
+      - data/raw/QMNIST
+    outs:
+      - data/prepared/test_qmnist.pt
 
   train:
     cmd: python src/train.py
@@ -50,29 +66,40 @@ stages:
           cache: false
           x: epoch
 
+  # Une prédiction par test set : stages predict@test et predict@test_qmnist
   predict:
-    cmd: python src/predict.py
-    deps:
-      - src/predict.py
-      - src/model.py
-      - src/common.py
-      - models/model.pt
-      - data/prepared/test.pt
-    params:
-      - predict
-    outs:
-      - predictions/test.csv
+    foreach:
+      - test
+      - test_qmnist
+    do:
+      cmd: python src/predict.py --split ${item}
+      deps:
+        - src/predict.py
+        - src/model.py
+        - src/common.py
+        - models/model.pt
+        - data/prepared/${item}.pt
+      params:
+        - predict
+      outs:
+        - predictions/${item}.csv
 
   evaluate:
-    cmd: python src/evaluate.py
+    cmd: python src/evaluate.py test test_qmnist
     deps:
       - src/evaluate.py
       - predictions/test.csv
+      - predictions/test_qmnist.csv
     metrics:
       - metrics/eval.json:
           cache: false
     plots:
-      - plots/confusion.csv:
+      - plots/confusion_test.csv:
+          cache: false
+          template: confusion
+          x: predicted
+          y: actual
+      - plots/confusion_test_qmnist.csv:
           cache: false
           template: confusion
           x: predicted

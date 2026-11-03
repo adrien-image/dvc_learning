@@ -1,6 +1,7 @@
 """Prédictions avec le modèle entraîné.
 
-- Sans argument (stage DVC) : prédit sur le test set MNIST -> predictions/test.csv
+- Sans image (stage DVC) : `python src/predict.py --split test_qmnist` -> predictions/test_qmnist.csv
+  (par défaut --split test, le test set MNIST)
 - Avec des images : `python src/predict.py img1.png img2.png ...` -> affiche les prédictions
 """
 
@@ -50,7 +51,8 @@ def load_images(paths: list[str]) -> torch.Tensor:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("images", nargs="*", help="Images à classer (sinon : test set MNIST)")
+    parser.add_argument("images", nargs="*", help="Images à classer (sinon : le split --split)")
+    parser.add_argument("--split", default="test", help="Split de data/prepared à prédire")
     args = parser.parse_args()
 
     params = load_params()["predict"]
@@ -64,9 +66,9 @@ def main() -> None:
             print(f"{path}: {pred.item()} ({conf.item():.1%})")
         return
 
-    x, y = load_split("test")
+    x, y = load_split(args.split)
     preds, confs = predict(model, x, batch_size, device)
-    out = ROOT / "predictions" / "test.csv"
+    out = ROOT / "predictions" / f"{args.split}.csv"
     out.parent.mkdir(exist_ok=True)
     with open(out, "w", newline="") as f:
         writer = csv.writer(f)

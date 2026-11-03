@@ -14,30 +14,52 @@ Pour partager données et modèles via un stockage S3 : voir [Stockage S3](#stoc
 
 ## Pipeline (`dvc.yaml`)
 
-| Stage           | Script                  | Dépend de (données)                 | Params                          | Sorties                                                            |
-|-----------------|-------------------------|-------------------------------------|---------------------------------|--------------------------------------------------------------------|
-| `download`      | `src/download.py`       | –                                   | –                               | `data/raw`                                                         |
-| `prepare_train` | `src/prepare_train.py`  | `data/raw`                          | `prepare`                       | `data/prepared/train.pt`, `data/prepared/val.pt`                   |
-| `prepare_test`  | `src/prepare_test.py`   | `data/raw`                          | –                               | `data/prepared/test.pt`                                            |
-| `train`         | `src/train.py`          | `train.pt`, `val.pt`                | `training.config` + son contenu | `models/model.pt`, `metrics/train.json`, `plots/train_history.csv` |
-| `predict`       | `src/predict.py`        | `models/model.pt`, `test.pt`        | `predict`                       | `predictions/test.csv`                                             |
-| `evaluate`      | `src/evaluate.py`       | `predictions/test.csv`              | –                               | `metrics/eval.json`, `plots/confusion.csv`                         |
+| Stage                 | Script                        | Dépend de (données)                           | Params                          | Sorties                                                            |
+|-----------------------|-------------------------------|-----------------------------------------------|---------------------------------|--------------------------------------------------------------------|
+| `download_mnist`      | `src/download.py mnist`       | –                                             | –                               | `data/raw/MNIST`                                                   |
+| `download_qmnist`     | `src/download.py qmnist`      | –                                             | –                               | `data/raw/QMNIST`                                                  |
+| `prepare_train`       | `src/prepare_train.py`        | `data/raw/MNIST`                              | `prepare`                       | `data/prepared/train.pt`, `data/prepared/val.pt`                   |
+| `prepare_test`        | `src/prepare_test.py`         | `data/raw/MNIST`                              | –                               | `data/prepared/test.pt`                                            |
+| `prepare_test_qmnist` | `src/prepare_test_qmnist.py`  | `data/raw/QMNIST`                             | –                               | `data/prepared/test_qmnist.pt`                                     |
+| `train`               | `src/train.py`                | `train.pt`, `val.pt`                          | `training.config` + son contenu | `models/model.pt`, `metrics/train.json`, `plots/train_history.csv` |
+| `predict@test`        | `src/predict.py --split test` | `models/model.pt`, `test.pt`                  | `predict`                       | `predictions/test.csv`                                             |
+| `predict@test_qmnist` | `src/predict.py --split test_qmnist` | `models/model.pt`, `test_qmnist.pt`    | `predict`                       | `predictions/test_qmnist.csv`                                      |
+| `evaluate`            | `src/evaluate.py test test_qmnist` | `predictions/test.csv`, `predictions/test_qmnist.csv` | –                 | `metrics/eval.json`, `plots/confusion_{test,test_qmnist}.csv`      |
 
 ```
-              download
-             /        \
-   prepare_train    prepare_test
-         |                |
-       train              |
-             \          /
-               predict
-                  |
-              evaluate
+download_mnist ──┬─► prepare_train ──► train ──┬───────────────────────┐
+                 │                             ▼                       ▼
+                 └─► prepare_test ───────► predict@test       predict@test_qmnist
+                                               │                       ▲     │
+download_qmnist ──► prepare_test_qmnist ───────┼───────────────────────┘     │
+                                               ▼                             │
+                                           evaluate ◄────────────────────────┘
 ```
 
-La préparation du train set et celle du test set sont séparées : changer `prepare.val_size`
-ou `prepare.seed` relance `prepare_train` et la suite, mais pas `prepare_test`. Le
-test set ne dépend d'aucun paramètre et reste identique d'une expérience à l'autre.
+La préparation du train set et celle des test sets sont séparées : changer `prepare.val_size`
+ou `prepare.seed` relance `prepare_train` et la suite, mais pas `prepare_test` ni
+`prepare_test_qmnist`. Les test sets ne dépendent d'aucun paramètre et restent identiques
+d'une expérience à l'autre.
+
+### Deux test sets : MNIST et QMNIST
+
+- **`test`** : le test set officiel de MNIST (10 000 chiffres).
+- **`test_qmnist`** : [QMNIST](https://github.com/facebookresearch/qmnist) `test50k`, les
+  50 000 chiffres que MNIST avait tirés du même fonds NIST mais jamais publiés
+  (Yadav & Bottou, 2019). Même source et même prétraitement que MNIST, et aucun modèle n'a
+  jamais été réglé dessus : un écart entre `test.acc` et `test_qmnist.acc` signale un
+  surapprentissage du test set officiel.
+
+`predict` est un stage `foreach` : un sous-stage `predict@<split>` par test set.
+`metrics/eval.json` contient une entrée par test set :
+
+```json
+{"test":        {"acc": 0.98, "n_errors": 157, "n_samples": 10000, "per_class_acc": {...}},
+ "test_qmnist": {"acc": 0.98, "n_errors": 926, "n_samples": 50000, "per_class_acc": {...}}}
+```
+
+Pour ajouter un autre test set : un stage qui produit `data/prepared/<split>.pt`, le nom du split
+dans la liste `foreach` de `predict`, et dans la commande et les deps de `evaluate`.
 
 ```bash
 dvc repro          # ne relance que les stages dont les deps/params ont changé
@@ -121,7 +143,7 @@ l'argument (`'...'`), pour que le shell n'interprète pas `~`.
 5. Comparer :
 
    ```bash
-   dvc exp show --keep 'Experiment|label_smoothing|test_acc' --drop '.*'
+   dvc exp show --keep 'Experiment|label_smoothing|^test.acc|^test_qmnist.acc' --drop '.*'
    ```
 
    La colonne `train.label_smoothing` n'apparaît renseignée que pour les expériences où la clé
@@ -164,7 +186,8 @@ dvc queue status
 
 # Comparer
 dvc exp show
-dvc exp show --only-changed --sort-by metrics/eval.json:test_acc --sort-order desc
+dvc exp show --only-changed --sort-by metrics/eval.json:test.acc --sort-order desc
+dvc exp show --keep 'Experiment|^test.acc|^test_qmnist.acc' --drop '.*'   # MNIST vs QMNIST
 dvc exp diff <exp1> <exp2>
 dvc plots diff <exp1> <exp2> --open   # courbes d'apprentissage + matrice de confusion
 

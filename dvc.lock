@@ -114,25 +114,33 @@ stages:
       md5: 18d5558e6eb2d024342848dd47135767
       size: 168925
   evaluate:
-    cmd: python src/evaluate.py
+    cmd: python src/evaluate.py test test_qmnist
     deps:
     - path: predictions/test.csv
       hash: md5
       md5: 18d5558e6eb2d024342848dd47135767
       size: 168925
+    - path: predictions/test_qmnist.csv
+      hash: md5
+      md5: 6bcf79347dea0cd16412531a960c444a
+      size: 888925
     - path: src/evaluate.py
       hash: md5
-      md5: 96146f4029c4662243eacc6b44c294b9
-      size: 1266
+      md5: fb349244cc177729b7596515957be6d6
+      size: 1807
     outs:
     - path: metrics/eval.json
       hash: md5
-      md5: 67d393aedf92a6ca54e2afaafc01c8a8
-      size: 357
-    - path: plots/confusion.csv
+      md5: 0ceaa363d71c67b3de595ba6196da6cb
+      size: 846
+    - path: plots/confusion_test.csv
       hash: md5
       md5: c197624ce1a00dee619f4472a02b2757
       size: 50018
+    - path: plots/confusion_test_qmnist.csv
+      hash: md5
+      md5: be927fafff355a3c24c6bfc9e21e799d
+      size: 250018
   download:
     cmd: python src/download.py
     deps:
@@ -149,9 +157,9 @@ stages:
   prepare_train:
     cmd: python src/prepare_train.py
     deps:
-    - path: data/raw
+    - path: data/raw/MNIST
       hash: md5
-      md5: ab3353d41bd7a24a20a31f29b64e3b3c.dir
+      md5: 563f931b5aa3d66aaee35ca9ea59ff3e.dir
       size: 66544770
       nfiles: 8
     - path: src/common.py
@@ -179,9 +187,9 @@ stages:
   prepare_test:
     cmd: python src/prepare_test.py
     deps:
-    - path: data/raw
+    - path: data/raw/MNIST
       hash: md5
-      md5: ab3353d41bd7a24a20a31f29b64e3b3c.dir
+      md5: 563f931b5aa3d66aaee35ca9ea59ff3e.dir
       size: 66544770
       nfiles: 8
     - path: src/common.py
@@ -197,3 +205,116 @@ stages:
       hash: md5
       md5: 586e03d737067acc485273391dec7cfd
       size: 7921741
+  download_mnist:
+    cmd: python src/download.py mnist
+    deps:
+    - path: src/download.py
+      hash: md5
+      md5: 6ae6a3969a0fa907b2880ae71edd3ad8
+      size: 777
+    outs:
+    - path: data/raw/MNIST
+      hash: md5
+      md5: 563f931b5aa3d66aaee35ca9ea59ff3e.dir
+      size: 66544770
+      nfiles: 8
+  download_qmnist:
+    cmd: python src/download.py qmnist
+    deps:
+    - path: src/download.py
+      hash: md5
+      md5: 6ae6a3969a0fa907b2880ae71edd3ad8
+      size: 777
+    outs:
+    - path: data/raw/QMNIST
+      hash: md5
+      md5: 8fe871a970d03590ba50314bc1a458d7.dir
+      size: 59229107
+      nfiles: 4
+  prepare_test_qmnist:
+    cmd: python src/prepare_test_qmnist.py
+    deps:
+    - path: data/raw/QMNIST
+      hash: md5
+      md5: 8fe871a970d03590ba50314bc1a458d7.dir
+      size: 59229107
+      nfiles: 4
+    - path: src/common.py
+      hash: md5
+      md5: 551399f0d55af991d8be74d155ec356e
+      size: 2673
+    - path: src/prepare_test_qmnist.py
+      hash: md5
+      md5: 8dc82b3ad09cb9fa35783a8f2e29ed36
+      size: 450
+    outs:
+    - path: data/prepared/test_qmnist.pt
+      hash: md5
+      md5: 4ff148475aa75a7fc86603b6b9482751
+      size: 42401925
+  predict@test:
+    cmd: python src/predict.py --split test
+    deps:
+    - path: data/prepared/test.pt
+      hash: md5
+      md5: 586e03d737067acc485273391dec7cfd
+      size: 7921741
+    - path: models/model.pt
+      hash: md5
+      md5: 292c94944ab2ff8fc953ed8ab1a29389
+      size: 1689777
+    - path: src/common.py
+      hash: md5
+      md5: 551399f0d55af991d8be74d155ec356e
+      size: 2673
+    - path: src/model.py
+      hash: md5
+      md5: 46a1a819d89e032c5f0baeaca88d6002
+      size: 837
+    - path: src/predict.py
+      hash: md5
+      md5: 2dff12584e8acbd6a3acaa49550186f7
+      size: 3017
+    params:
+      params.yaml:
+        predict:
+          batch_size: 512
+          device: auto
+    outs:
+    - path: predictions/test.csv
+      hash: md5
+      md5: 18d5558e6eb2d024342848dd47135767
+      size: 168925
+  predict@test_qmnist:
+    cmd: python src/predict.py --split test_qmnist
+    deps:
+    - path: data/prepared/test_qmnist.pt
+      hash: md5
+      md5: 4ff148475aa75a7fc86603b6b9482751
+      size: 42401925
+    - path: models/model.pt
+      hash: md5
+      md5: 292c94944ab2ff8fc953ed8ab1a29389
+      size: 1689777
+    - path: src/common.py
+      hash: md5
+      md5: 551399f0d55af991d8be74d155ec356e
+      size: 2673
+    - path: src/model.py
+      hash: md5
+      md5: 46a1a819d89e032c5f0baeaca88d6002
+      size: 837
+    - path: src/predict.py
+      hash: md5
+      md5: 2dff12584e8acbd6a3acaa49550186f7
+      size: 3017
+    params:
+      params.yaml:
+        predict:
+          batch_size: 512
+          device: auto
+    outs:
+    - path: predictions/test_qmnist.csv
+      hash: md5
+      md5: 6bcf79347dea0cd16412531a960c444a
+      size: 888925
